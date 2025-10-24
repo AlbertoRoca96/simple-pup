@@ -1,87 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Sparkles } from 'lucide-react';
-import './SearchBar.css';
-
-interface SearchBarProps {
-  value: string;
-  onChange: (value: string) => void;
-  onClear: () => void;
-  loading: boolean;
-  placeholder?: string;
-}
-
-export function SearchBar({ value, onChange, onClear, loading, placeholder }: SearchBarProps) {
-  const [focused, setFocused] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputRef.current) {
-      inputRef.current.blur();
-    }
-  };
-
-  const handleClear = () => {
-    onChange('');
-    onClear();
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  };
-
-  return (
-    <div className="search-bar" data-testid="search-bar">
-      <div className={`search-bar__container ${focused ? 'focused' : ''} ${value ? 'has-value' : ''}`} data-testid="search-container">
-        <div className="search-bar__icon">
-          {loading ? (
-            <div className="search-bar__spinner" />
-          ) : (
-            <Search size={20} />
-          )}
-        </div>
-        
-        <form onSubmit={handleSubmit} className="search-bar__form">
-          <input
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder={placeholder || 'Search millions of products...'}
-            className="search-bar__input"
-            data-testid="search-input"
-            autoFocus
-          />
-        </form>
-        
-        {value && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="search-bar__clear"
-            data-testid="clear-search"
-            aria-label="Clear search"
-          >
-            <X size={18} />
-          </button>
-        )}
-        
-        <div className="search-bar__ai-indicator">
-          <Sparkles size={16} />
-          <span>AI-Powered</span>
-        </div>
-      </div>
-      
-      <div className="search-bar__examples">
-        <h4>Try smart searches like:</h4>
-        <ul>
-          <li>"Sony TV under $300 best rated"</li>
-          <li>"Nike shoes between $50-$100"</li>
-          <li>"Apple laptop for gaming under $1200"</li>
-          <li>"Samsung headphones wireless under $100"</li>
-        </ul>
-      </div>
-    </div>
-  );
+interface Props { value: string; onChange: (v: string) => void; onClear: () => void; }
+export default function SearchBar({ value, onChange, onClear }: Props) {
+ return (
+ <div className='grid gap-3'>
+ <div>
+ <label className='block text-sm font-medium text-gray-700'>Search</label>
+ <input data-testid='search-input' type='text' value={value} onChange={(e) => onChange(e.target.value)} placeholder='Try: id:15102669883 price:500-800 "folding"' className=' mt-1 w-full rounded-2xl border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500' />
+ </div>
+ <div className='flex gap-2'>
+ {value && (<button className='rounded-xl border px-3 py-2' onClick={onClear}>Clear</button>)}
+ <details className='rounded-xl border px-3 py-2'><summary className='cursor-pointer select-none'>Syntax</summary>
+ <div className='mt-2 text-sm text-gray-600'>
+ <div><b>ID</b>: <code>id:15102669883</code></div>
+ <div><b>Price</b>: <code>price:500-800</code>, <code>price:&lt;700</code>, <code>price:&gt;=650</code>, <code>$500-$800</code>, <code>&lt;700</code></div>
+ <div><b>Keywords</b>: looked up in Name & Description</div>
+ <div>Combine: <code>folding price:&lt;600</code></div>
+ </div>
+ </details>
+ </div>
+ </div>
+ );
 }
