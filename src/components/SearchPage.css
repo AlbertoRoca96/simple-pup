@@ -1,0 +1,138 @@
+.search-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+.search-page__header {
+  background: linear-gradient(135deg, #0071ce 0%, #004c91 100%);
+  color: white;
+  padding: 2rem 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-page__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.search-page__title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.search-page__subtitle {
+  font-size: 1.1rem;
+  margin: 0;
+  text-align: center;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.search-page__content {
+  flex: 1;
+  padding: 0;
+}
+
+.search-page__primary-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.search-page__search-section {
+  margin: 2rem 0;
+}
+
+.search-page__layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.search-page__sidebar {
+  min-width: 300px;
+}
+
+.search-page__results {
+  min-width: 0;
+}
+
+.search-page__filter-toggle {
+  margin-bottom: 1rem;
+}
+
+.filter-toggle__button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.filter-toggle__button:hover {
+  border-color: #0071ce;
+  box-shadow: 0 2px 4px rgba(0,113,206,0.1);
+}
+
+.filter-toggle__text {
+  font-weight: 500;
+  color: #495057;
+}
+
+.filter-toggle__icon {
+  transition: transform 0.2s ease;
+  color: #6c757d;
+}
+
+.filter-toggle__icon.open {
+  transform: rotate(180deg);
+}
+
+.search-page__footer {
+  background-color: #343a40;
+  color: white;
+  padding: 2rem 0;
+  margin-top: 3rem;
+}
+
+.search-page__footer p {
+  margin: 0;
+  text-align: center;
+  opacity: 0.8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .search-page__title {
+    font-size: 2rem;
+  }
+  
+  .search-page__subtitle {
+    font-size: 1rem;
+  }
+  
+  .search-page__layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .search-page__sidebar {
+    min-width: auto;
+  }
+  
+  .search-page__primary-section {
+    padding: 0 0.5rem;
+  }
+}
