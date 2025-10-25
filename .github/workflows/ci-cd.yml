@@ -112,51 +112,52 @@ jobs:
       - name: Check for vulnerabilities
         run: npm audit --audit-level critical
 
-  deploy:
-    name: Deploy to GitHub Pages
-    runs-on: ubuntu-latest
-    needs: [test, e2e-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+  # DEPLOY DISABLED - Using deploy.yml for single source of truth
+  # deploy:
+  #   name: Deploy to GitHub Pages
+  #   runs-on: ubuntu-latest
+  #   needs: [test, e2e-test]
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   
+  #   permissions:
+  #     contents: read
+  #     pages: write
+  #     id-token: write
 
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20.x'
+  #         cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+  #     - name: Install dependencies
+  #       run: npm ci
 
-      - name: Build for production
-        run: npm run build
-        env:
-          VITE_WALMART_API_KEY: ${{ secrets.WALMART_API_KEY }}
-          VITE_APP_URL: ${{ vars.APP_URL || 'https://albertoroca96.github.io/simple-pup' }}
+  #     - name: Build for production
+  #       run: npm run build
+  #       env:
+  #         VITE_WALMART_API_KEY: ${{ secrets.WALMART_API_KEY }}
+  #         VITE_APP_URL: ${{ vars.APP_URL || 'https://albertoroca96.github.io/simple-pup' }}
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+  #     - name: Setup Pages
+  #       uses: actions/configure-pages@v4
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
+  #     - name: Upload artifact
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         path: ./dist
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+  #     - name: Deploy to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v4
 
   catalog-refresh:
     name: Refresh Product Catalog
@@ -197,7 +198,7 @@ jobs:
   lighthouse-audit:
     name: Lighthouse Performance Audit
     runs-on: ubuntu-latest
-    needs: deploy
+    # needs: deploy - Deploy handled by deploy.yml
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
@@ -221,26 +222,20 @@ jobs:
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [deploy, catalog-refresh]
+    needs: [catalog-refresh]
     if: always() && github.ref == 'refs/heads/main'
     
     steps:
-      - name: Notify success
-        if: needs.deploy.result == 'success'
+      - name: Notify CI/CD completion
         run: |
-          echo "✅ Deployment successful to GitHub Pages"
-          echo "🌐 Site available at: ${{ needs.deploy.outputs.page_url }}"
-
-      - name: Notify failure
-        if: needs.deploy.result == 'failure'
-        run: |
-          echo "❌ Deployment failed"
-          exit 1
+          echo "✅ CI/CD Pipeline completed"
+          echo "🌐 Deployment handled by deploy.yml workflow"
 
   cleanup:
     name: Cleanup Artifacts
     runs-on: ubuntu-latest
-    needs: [test, e2e-test, deploy]
+    needs: [test, e2e-test]
+    # deploy handled by deploy.yml
     if: always()
     
     steps:
