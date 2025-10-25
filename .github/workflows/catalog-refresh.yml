@@ -1,0 +1,36 @@
+name: Catalog Refresh
+on:
+  schedule:
+    - cron: '0 6 * * *' 
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm 
+      - run: npm ci
+      - name: Fetch via Walmart API
+        if: ${{ secrets.WALMART_CLIENT_ID && secrets.WALMART_CLIENT_SECRET }}
+        env:
+          WALMART_CLIENT_ID: ${{ secrets.WALMART_CLIENT_ID }}
+          WALMART_CLIENT_SECRET: ${{ secrets.WALMART_CLIENT_SECRET }}
+          WALMART_QUERIES: ${{ vars.WALMART_QUERIES || 'Electric Bike,E-Bike,Hyper Bike,Vivi' }}
+        run: node scripts/walmart_api_fetch.mjs
+      - name: Optional: Enrich via Playwright
+        if: ${{ vars.PLAYWRIGHT == 'true' }}
+        run: |
+          npx playwright install --with-deps
+          node scripts/walmart_crawl_playwright.mjs --max=200 --dryRun=false
+      - name: Create PR with updated catalog
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore(data): refresh Walmart catalog' 
+          title: 'chore(data): refresh Walmart catalog' 
+          body: 'Automated refresh of public/data/walmart_products.json' 
+          branch: chore/refresh-catalog

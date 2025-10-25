@@ -3,7 +3,22 @@ export default function ProductCard({ p }: { p: Product }) {
  return (
  <a data-testid='product-card' href={p.url} target='_blank' rel='noreferrer noopener' className='block rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow'>
  <div className='flex gap-4'>
- <div className='h-24 w-24 flex-shrink-0 rounded-xl bg-gray-100 grid place-items-center text-xs text-gray-500'><span>{p.image ? '' : 'No image'}</span></div>
+ {p.image ? (
+    <img 
+     src={p.image} 
+     alt={p.name}
+     loading='lazy'
+     className='h-24 w-24 flex-shrink-0 rounded-xl object-cover bg-gray-100'
+     onError={(e) => {
+      const target = e.target as HTMLImageElement;
+      target.style.display = 'none';
+      target.nextElementSibling?.classList.remove('hidden');
+     }}
+    />
+   ) : null}
+   <div className={`h-24 w-24 flex-shrink-0 rounded-xl bg-gray-100 grid place-items-center text-xs text-gray-500 ${!p.image ? '' : 'hidden'}`}>
+    No image
+   </div>
  <div className='min-w-0'>
  <div className='flex items-baseline gap-2'>
  <h3 className='truncate text-lg font-semibold' title={p.name}>{p.name}</h3>
