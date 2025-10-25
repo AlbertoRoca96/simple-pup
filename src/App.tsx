@@ -4,16 +4,78 @@ import ProductCard from './components/ProductCard';
 import type { Product } from './types';
 import { parseQuery, filterAndScoreProducts } from './lib/search';
 import Fuse from 'fuse.js';
+interface CatalogIndex {
+ totalItems: number;
+ lastRefreshed: string;
+ files: string[];
+}
+
 export default function App() {
  const [all, setAll] = useState<Product[]>([]);
  const [q, setQ] = useState('');
- const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc'>('name');
+ const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc' | 'id'>('name');
  const [page, setPage] = useState(1);
+ const [catalogIndex, setCatalogIndex] = useState<CatalogIndex | null>(null);
+ const [isLoading, setIsLoading] = useState(true);
  const itemsPerPage = 12;
  
  useEffect(() => {
- const url = new URL(`${import.meta.env.BASE_URL}data/walmart_products.json`, window.location.href);
- fetch(url.toString()).then(r => r.json()).then((rows: Product[]) => setAll(rows)).catch(err => console.error('Failed to load dataset', err));
+ setIsLoading(true);
+ 
+ async function loadCatalog() {
+   try {
+     // Try to load index.json first
+     const indexUrl = new URL(`${import.meta.env.BASE_URL}data/index.json`, window.location.href);
+     let data: Product[] = [];
+     let indexInfo: CatalogIndex | null = null;
+     
+     try {
+       const indexResponse = await fetch(indexUrl.toString());
+       indexInfo = await indexResponse.json();
+       setCatalogIndex(indexInfo);
+       
+       // Load catalog based on index
+       if (indexInfo && indexInfo.files.length === 1 && indexInfo.files[0] === 'walmart_products.json') {
+         // Single file case
+         const dataUrl = new URL(`${import.meta.env.BASE_URL}data/walmart_products.json`, window.location.href);
+         const dataResponse = await fetch(dataUrl.toString());
+         data = await dataResponse.json();
+       } else if (indexInfo) {
+         // Chunked case - load all chunks
+         const allChunks = await Promise.all(
+           indexInfo.files.map(async (filename) => {
+             const chunkUrl = new URL(`${import.meta.env.BASE_URL}data/${filename}`, window.location.href);
+             const response = await fetch(chunkUrl.toString());
+             return response.json();
+           })
+         );
+         data = allChunks.flat();
+       }
+     } catch (indexError) {
+       // Fallback to single file if index.json doesn't exist
+       console.log('Index.json not found, falling back to single file');
+       const dataUrl = new URL(`${import.meta.env.BASE_URL}data/walmart_products.json`, window.location.href);
+       const dataResponse = await fetch(dataUrl.toString());
+       data = await dataResponse.json();
+       
+       // Create synthetic index for backward compatibility
+       const syntheticIndex: CatalogIndex = {
+         totalItems: data.length,
+         lastRefreshed: new Date().toISOString(),
+         files: ['walmart_products.json']
+       };
+       setCatalogIndex(syntheticIndex);
+     }
+     
+     setAll(data);
+   } catch (error) {
+     console.error('Failed to load dataset', error);
+   } finally {
+     setIsLoading(false);
+   }
+ }
+ 
+ loadCatalog();
  }, []);
  
  // Initialize Fuse.js for fuzzy search
@@ -72,6 +134,8 @@ export default function App() {
     return sorted.sort((a, b) => a.price - b.price);
    case 'price_desc':
     return sorted.sort((a, b) => b.price - a.price);
+   case 'id':
+    return sorted.sort((a, b) => a.id.localeCompare(b.id));
    default:
     return sorted;
   }
@@ -97,71 +161,94 @@ export default function App() {
  
  <SearchBar value={q} onChange={setQ} onClear={() => setQ('')} />
  
- {/* Controls */}
- <div className='mt-4 flex flex-wrap gap-4 items-center justify-between'>
-  <div className='flex items-center gap-2'>
-   <label htmlFor='sort' className='text-sm font-medium'>Sort:</label>
-   <select
-    id='sort'
-    value={sortBy}
-    onChange={(e) => setSortBy(e.target.value as any)}
-    className='rounded border border-gray-300 px-3 py-1 text-sm'
-   >
-    <option value='name'>Name</option>
-    <option value='price_asc'>Price (Low to High)</option>
-    <option value='price_desc'>Price (High to Low)</option>
-   </select>
-  </div>
+ {/* Status Badge */}
+ <div className='mt-4 flex items-center justify-between flex-wrap gap-2'>
+  {catalogIndex && (
+   <div className='inline-flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full text-sm text-green-800'>
+    <span className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></span>
+    <span className='font-medium'>{catalogIndex.totalItems.toLocaleString()} products</span>
+    <span className='text-green-600'>•</span>
+    <span>Last refreshed: {new Date(catalogIndex.lastRefreshed).toLocaleDateString()}</span>
+   </div>
+  )}
   
-  <div className='text-sm text-gray-600'>
-   <span className='inline-flex items-center gap-1'>
-    <span className='inline-block w-2 h-2 rounded-full bg-green-500'></span>
-    {all.length} products • Last refreshed: {new Date().toLocaleDateString()}
-   </span>
-  </div>
+  {isLoading && (
+   <div className='inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-800'>
+    <span className='w-2 h-2 bg-blue-500 rounded-full animate-pulse'></span>
+    Loading catalog...
+   </div>
+  )}
+ </div>
+ 
+ {/* Sorting Controls */}
+ <div className='mt-4 flex items-center gap-2'>
+  <label htmlFor='sort' className='text-sm font-medium text-gray-700'>Sort by:</label>
+  <select
+   id='sort'
+   value={sortBy}
+   onChange={(e) => setSortBy(e.target.value as any)}
+   className='rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+  >
+   <option value='name'>Name</option>
+   <option value='price_asc'>Price ↑</option>
+   <option value='price_desc'>Price ↓</option>
+   <option value='id'>Item ID</option>
+  </select>
  </div>
  
  <section className='mt-6'>
-  {/* Results status with aria-live */}
-  <div className='mb-4 text-sm text-gray-600' aria-live='polite' aria-atomic='true'>
-   Showing <b>{paginatedResults.length}</b> of <b>{sortedResults.length}</b> results 
-   {q && ` for "${q}"`}
-   {totalPages > 1 && ` (page ${page} of ${totalPages})`}
-  </div>
-  
-  {paginatedResults.length === 0 ? (
-   <div className='rounded-xl border bg-white p-6 text-gray-600'>
-    No products match. Try <code>price:500-800</code>, <code>id:15102669883</code>, or <code>electric bike</code>.
+  {/* Loading state */}
+  {isLoading ? (
+   <div className='rounded-xl border bg-white p-12 text-center'>
+    <div className='inline-flex items-center gap-3 text-gray-600'>
+     <div className='w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin'></div>
+     <span>Loading Walmart catalog...</span>
+    </div>
    </div>
   ) : (
    <>
-    <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-     {paginatedResults.map(p => <ProductCard key={p.id} p={p} />)}
+    {/* Results status with aria-live */}
+    <div className='mb-4 text-sm text-gray-600' aria-live='polite' aria-atomic='true'>
+     Showing <b>{paginatedResults.length}</b> of <b>{sortedResults.length}</b> results 
+     {q && ` for "${q}"`}
+     {totalPages > 1 && ` (page ${page} of ${totalPages})`}
     </div>
     
-    {/* Pagination */}
-    {totalPages > 1 && (
-     <div className='mt-6 flex justify-center gap-2'>
-      <button
-       onClick={() => setPage(p => Math.max(1, p - 1))}
-       disabled={page === 1}
-       className='rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50'
-      >
-       Previous
-      </button>
-      
-      <span className='px-3 py-1 text-sm'>
-       Page {page} of {totalPages}
-      </span>
-      
-      <button
-       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-       disabled={page === totalPages}
-       className='rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50'
-      >
-       Next
-      </button>
+    {paginatedResults.length === 0 ? (
+     <div className='rounded-xl border bg-white p-6 text-gray-600'>
+      No products match. Try <code>price:500-800</code>, <code>id:15102669883</code>, or <code>electric bike</code>.
      </div>
+    ) : (
+     <>
+      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+       {paginatedResults.map(p => <ProductCard key={p.id} p={p} />)}
+      </div>
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+       <div className='mt-6 flex justify-center gap-2'>
+        <button
+         onClick={() => setPage(p => Math.max(1, p - 1))}
+         disabled={page === 1}
+         className='rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50'
+        >
+         Previous
+        </button>
+        
+        <span className='px-3 py-1 text-sm'>
+         Page {page} of {totalPages}
+        </span>
+        
+        <button
+         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+         disabled={page === totalPages}
+         className='rounded border border-gray-300 px-3 py-1 text-sm disabled:opacity-50'
+        >
+         Next
+        </button>
+       </div>
+      )}
+     </>
     )}
    </>
   )}
