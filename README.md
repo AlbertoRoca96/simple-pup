@@ -266,4 +266,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by Alberto Roca**
 
-*Smart search powered by AI, built for performance and reliability*
+*Smart search powered by AI, built for performance and reliability*"# Trigger rebuild"  
